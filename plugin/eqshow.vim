@@ -399,7 +399,7 @@ import vim
 is_pretty = False
 EOF
 
-function! Maths()
+function! EqShow()
 python <<EOF
 
 is_eq = False
@@ -409,39 +409,37 @@ vim.command('set modifiable')
 if not is_pretty:
   raw = vim.current.buffer[:]
 
-cursor = vim.current.window.cursor
-del vim.current.buffer[:]
-for line in raw:
-  if '<maths>' in line:
-    is_eq = True
-    vim.current.buffer.append(line)
-  elif '</maths>' in line:
-    is_eq = False
-    indent = len(eq) - len(eq.lstrip())
-    for eq_line in make_ascii(eq):
-      vim.current.buffer.append(' ' * indent + eq_line)
-    eq = ''
-    vim.current.buffer.append(line)
-  elif not is_eq:
-    vim.current.buffer.append(line)
-  else:
-    eq += line
+  cursor = vim.current.window.cursor
+  del vim.current.buffer[:]
+  for line in raw:
+    if '<maths>' in line:
+      is_eq = True
+      vim.current.buffer.append(line)
+    elif '</maths>' in line:
+      is_eq = False
+      indent = len(eq) - len(eq.lstrip())
+      for eq_line in make_ascii(eq):
+        vim.current.buffer.append(' ' * indent + eq_line)
+      eq = ''
+      vim.current.buffer.append(line)
+    elif not is_eq:
+      vim.current.buffer.append(line)
+    else:
+      eq += line
 
-del vim.current.buffer[0]
-vim.current.window.cursor = cursor
-is_pretty = True
-vim.command('set nomodifiable')
+  del vim.current.buffer[0]
+  vim.current.window.cursor = cursor
+  is_pretty = True
+  vim.command('set nomodifiable')
+else:
+  vim.command('set modifiable')
+
+  cursor = vim.current.window.cursor
+  vim.current.buffer[:] = raw
+  vim.current.window.cursor = cursor
+
+  is_pretty = False
 EOF
 endfunction
 
-function! NoMaths()
-python <<EOF
-vim.command('set modifiable')
-
-cursor = vim.current.window.cursor
-vim.current.buffer[:] = raw
-vim.current.window.cursor = cursor
-
-is_pretty = False
-EOF
-endfunction
+command! -nargs=0 EqShow call EqShow()

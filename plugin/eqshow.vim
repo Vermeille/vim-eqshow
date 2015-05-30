@@ -397,49 +397,63 @@ python <<EOF
 import vim
 
 is_pretty = False
+
+def eq_show_toggle():
+  global is_pretty
+  global raw
+  print('is_pretty', is_pretty)
+  vim.command('set modifiable')
+  if not is_pretty:
+    raw = vim.current.buffer[:]
+    is_eq = False
+    eq = ''
+
+    cursor = vim.current.window.cursor
+    del vim.current.buffer[:]
+    for line in raw:
+      if '<maths>' in line:
+        is_eq = True
+        vim.current.buffer.append(line)
+      elif '</maths>' in line:
+        is_eq = False
+        indent = len(eq) - len(eq.lstrip())
+        for eq_line in make_ascii(eq):
+          vim.current.buffer.append(' ' * indent + eq_line)
+        eq = ''
+        vim.current.buffer.append(line)
+      elif not is_eq:
+        vim.current.buffer.append(line)
+      else:
+        eq += line
+
+    del vim.current.buffer[0]
+    vim.current.window.cursor = cursor
+    is_pretty = True
+    vim.command('set nomodifiable')
+  else:
+    cursor = vim.current.window.cursor
+    vim.current.buffer[:] = raw
+    vim.current.window.cursor = cursor
+
+    is_pretty = False
+
+def eq_show_off():
+    if is_pretty:
+        eq_show_toggle()
 EOF
 
 function! EqShow()
 python <<EOF
+eq_show_toggle()
+EOF
+endfunction
 
-is_eq = False
-eq = ''
-
-vim.command('set modifiable')
-if not is_pretty:
-  raw = vim.current.buffer[:]
-
-  cursor = vim.current.window.cursor
-  del vim.current.buffer[:]
-  for line in raw:
-    if '<maths>' in line:
-      is_eq = True
-      vim.current.buffer.append(line)
-    elif '</maths>' in line:
-      is_eq = False
-      indent = len(eq) - len(eq.lstrip())
-      for eq_line in make_ascii(eq):
-        vim.current.buffer.append(' ' * indent + eq_line)
-      eq = ''
-      vim.current.buffer.append(line)
-    elif not is_eq:
-      vim.current.buffer.append(line)
-    else:
-      eq += line
-
-  del vim.current.buffer[0]
-  vim.current.window.cursor = cursor
-  is_pretty = True
-  vim.command('set nomodifiable')
-else:
-  vim.command('set modifiable')
-
-  cursor = vim.current.window.cursor
-  vim.current.buffer[:] = raw
-  vim.current.window.cursor = cursor
-
-  is_pretty = False
+function! EqShowOff()
+python << EOF
+eq_show_off()
 EOF
 endfunction
 
 command! -nargs=0 EqShow call EqShow()
+command! -nargs=0 EqShowOff call EqShowOff()
+autocmd BufWrite * EqShowOff

@@ -88,4 +88,3 @@ The grammars are executed by a recursive descent parser
 
 * Some language constructs are not supported => improve the grammar!
 * Only one buffer at a time is supported now.
-* Nothing prevents you from saving the pretty rendered file, and losing your code.

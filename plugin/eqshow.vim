@@ -80,7 +80,7 @@ class Binop(object):
     b = None
 
     def __init__(self, a, binop, b):
-        self.op = ' ' + binop + ' '
+        self.op = (' ' + binop + ' ').decode('utf-8')
         self.a = a
         self.b = b
 
@@ -98,7 +98,7 @@ class Binop(object):
         self.b.show(buf, (x + len(self.op) + ax, base_line - b_up))
 
     def __repr__(self):
-        return 'Binop(' + repr(self.a) + ', ' + self.op + ', ' + repr(self.b) + ')'
+        return 'Binop(' + repr(self.a) + ', ' + self.op.encode('utf-8') + ', ' + repr(self.b) + ')'
 
 class Frac(object):
     top = None
@@ -337,47 +337,23 @@ def make_fun(fun, args):
         if fun.txt == 'sigmoid':
             return Funcall(Term('sigma'), args)
         if fun.txt == 'sum':
-            return Sum(Term(''), Term(''), args)
+            return Sum(Term(''), Term(''), Paren(args))
+        if fun.txt == 'inv':
+            return Super(Paren(args), Term('-1'))
     return Funcall(fun, args)
-
-rules = [
-# 0 Eq
-    ([1, '=', 0], [Binop, 0, 1, 2]),
-# 1 Plus
-    ([2, '\+', 1], [Binop, 0, 1, 2]),
-# 2 Minus
-    ([3, '-', 2], [Binop, 0, 1, 2]),
-# 3 Mul
-    ([4, '\*', 3], [Binop, 0, 1, 2]),
-# 4 Div
-    ([5, '/', 4], [Frac, 0, 2]),
-# 5 Term
-    ([[7, 8, 9]], [lambda x: x, 0]),
-# 6 Atomic
-    (["(\w+)"], [Term, 0]),
-# 7 Paren
-    (['\(', 11, '\)'], [Paren, 1]),
-# 8 Neg
-    (['-', [6, 7]], [Neg, 1]),
-# 9 Funcall
-    ([10, '\(', 11, '\)'], [make_fun, 0, 2]),
-# 10 Field Access
-    ([6, '\.', 10], [lambda x, y: Term(x.txt + '.' + y.txt), 0, 2]),
-# 11 CSV
-    ([1, ',', 11], [lambda x, y: CSV([x] + (y.exprs if isinstance(y, CSV) else [y])), 0, 2]),
-]
 
 def parse(expr, eidx, rules, ridx):
     i = 0
+    #print(expr, ridx)
     for r in rules[ridx][0]:
         if type(r) == list:
             for subrule in r:
                 if parse(expr, eidx + i, rules, subrule):
-                  continue
+                    break
         elif isinstance(r, int):
             parse(expr, eidx + i, rules, r)
-        elif not (isinstance(expr[eidx + i], str) and \
-            re.search(r, expr[eidx + i]) != None):
+        elif not isinstance(expr[eidx + i], str) or \
+            re.search(r, expr[eidx + i]) == None:
                 return False
         i += 1
 

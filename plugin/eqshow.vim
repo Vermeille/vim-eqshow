@@ -60,13 +60,16 @@ greek = [
 
 class Term(object):
     txt = ''
+    length = 0
+
     def __init__(self, txt):
         self.txt = txt
         for g in greek:
             self.txt = self.txt.replace(*g)
 
     def size(self):
-        return (len(self.txt.decode('utf-8')), 0, 0)
+        self.length = len(self.txt.decode('utf-8'))
+        return (self.length, 0, 0)
 
     def show(self, buf, (x, y)):
         return strbuf(self.txt.decode('utf-8'), buf, (x, y))
@@ -87,15 +90,16 @@ class Binop(object):
     def size(self):
         (ax, a_up, a_down) = self.a.size()
         (bx, b_up, b_down) = self.b.size()
+        self.ax = ax
+        self.a_up = a_up
+        self.b_up = b_up
         return (ax + len(self.op) + bx, max(a_up, b_up), max(a_down, b_down))
 
     def show(self, buf, (x, y)):
-        (ax, a_up, a_down) = self.a.size()
-        (bx, b_up, b_down) = self.b.size()
-        base_line = y + max(a_up, b_up)
-        self.a.show(buf, (x, base_line - a_up))
-        strbuf(self.op, buf, (x + ax, base_line))
-        self.b.show(buf, (x + len(self.op) + ax, base_line - b_up))
+        base_line = y + max(self.a_up, self.b_up)
+        self.a.show(buf, (x, base_line - self.a_up))
+        strbuf(self.op, buf, (x + self.ax, base_line))
+        self.b.show(buf, (x + len(self.op) + self.ax, base_line - self.b_up))
 
     def __repr__(self):
         return 'Binop(' + repr(self.a) + ', ' + self.op.encode('utf-8') + ', ' + repr(self.b) + ')'
@@ -111,17 +115,25 @@ class Frac(object):
     def size(self):
         (ax, a_up, a_down) = self.top.size()
         (bx, b_up, b_down) = self.bottom.size()
+        self.ax = ax
+        self.a_up = a_up
+        self.a_down = a_down
+        self.bx = bx
         return (max(ax, bx), a_up + a_down + 1, b_up + b_down + 1)
 
     def show(self, buf, (x, y)):
-        (ax, a_up, a_down) = self.top.size()
-        (bx, b_up, b_down) = self.bottom.size()
-        y_up = a_up + a_down + 1
-        xlen = max(ax, bx)
+        y_up = self.a_up + self.a_down + 1
+        xlen = max(self.ax, self.bx)
+        # <maths>
         xmiddle = xlen / 2
-        self.top.show(buf, (x + xmiddle - ax / 2, y))
+        # </maths>
+        # <maths>
+        self.top.show(buf, (x + xmiddle - self.ax / 2, y))
+        # </maths>
         strbuf('-' * xlen, buf, (x, y + y_up))
-        self.bottom.show(buf, (x + xmiddle - bx / 2, y + y_up + 1))
+        # <maths>
+        self.bottom.show(buf, (x + xmiddle - self.bx / 2, y + y_up + 1))
+        # </maths>
 
     def __repr__(self):
         return 'Frac(' + repr(self.top) + ', ' + repr(self.bottom) + ')'
@@ -140,36 +152,40 @@ class Sum(object):
         (fx, f_up, f_down) = self.fromm.size()
         (tx, t_up, t_down) = self.to.size()
         (ex, e_up, e_down) = self.expr.size()
-        fy = f_up + f_down + 1
-        ty = t_up + t_down + 1
-        sigmax = max(4, fx, tx) + ex
-        sigma_up = max(2 + ty, e_up)
-        sigma_down = max(2 + fy, e_down)
-        return (sigmax, sigma_up, sigma_down)
+        self.fy = f_up + f_down + 1
+        self.ty = t_up + t_down + 1
+
+        self.fx = fx
+        self.f_up = f_up
+
+        self.tx = tx
+
+        self.e_up = e_up
+
+        self.sigmax = max(4, fx, tx) + ex
+        self.sigma_up = max(2 + self.ty, e_up)
+        self.sigma_down = max(2 + self.fy, e_down)
+        return (self.sigmax, self.sigma_up, self.sigma_down)
 
     def show(self, buf, (x, y)):
-        (fx, f_up, f_down) = self.fromm.size()
-        (tx, t_up, t_down) = self.to.size()
-        (ex, e_up, e_down) = self.expr.size()
-        (sx, s_up, s_down) = self.size()
-        fy = f_up + f_down + 1
-        ty = t_up + t_down + 1
         # <maths>
-        sigmax = max(0, (max(fx, tx) - 4) / 2)
+        sigmax = max(0, (max(self.fx, self.tx) - 4) / 2)
         # </maths>
         # <maths>
-        self.to.show(buf, (x + max(0, (fx - tx) / 2), y + s_up - 2 - ty))
+        self.to.show(buf, (x + max(0, (self.fx - self.tx) / 2), y + self.sigma_up - 2 - self.ty))
         # </maths>
 
-        strbuf("====", buf, (x + sigmax, y + s_up - 2))
-        strbuf("\\", buf, (x + sigmax, y + s_up - 1))
-        strbuf(" >", buf, (x + sigmax, y + s_up))
-        strbuf("/", buf, (x + sigmax, y + s_up + 1))
-        strbuf("====", buf, (x + sigmax, y + s_up + 2))
+        strbuf("====", buf, (x + sigmax, y + self.sigma_up - 2))
+        strbuf("\\", buf, (x + sigmax, y + self.sigma_up - 1))
+        strbuf(" >", buf, (x + sigmax, y + self.sigma_up))
+        strbuf("/", buf, (x + sigmax, y + self.sigma_up + 1))
+        strbuf("====", buf, (x + sigmax, y + self.sigma_up + 2))
 
-        self.fromm.show(buf, (x + max(0, (tx - fx) / 2), y + s_up + 3))
+        # <maths>
+        self.fromm.show(buf, (x + max(0, (self.tx - self.fx) / 2), y + self.sigma_up + 3))
+        # </maths>
 
-        self.expr.show(buf, (x + max(4, tx, fx), y + s_up - e_up))
+        self.expr.show(buf, (x + max(4, self.tx, self.fx), y + self.sigma_up - self.e_up))
 
 class Super(object):
     sup = None
@@ -182,13 +198,14 @@ class Super(object):
     def size(self):
         (ex, e_up, e_down) = self.expr.size()
         (sx, s_up, s_down) = self.sup.size()
+        self.ex = ex
+        self.s_up = s_up
+        self.s_down = s_down
         return (ex + sx, e_up + s_up + s_down + 1, e_down)
 
     def show(self, buf, (x, y)):
-        (ex, e_up, e_down) = self.expr.size()
-        (sx, s_up, s_down) = self.sup.size()
-        self.expr.show(buf, (x, y + s_up + s_down + 1))
-        self.sup.show(buf, (x + ex, y))
+        self.expr.show(buf, (x, y + self.s_up + self.s_down + 1))
+        self.sup.show(buf, (x + self.ex, y))
 
     def __repr__(self):
         return 'Super(' + repr(self.sup) + ', ' + repr(self.expr) + ')'
@@ -204,13 +221,13 @@ class Sub(object):
     def size(self):
         (ex, e_up, e_down) = self.expr.size()
         (sx, s_up, s_down) = self.sub.size()
+        self.ex = ex
+        self.e_down = e_down
         return (ex + sx, e_up, e_down + s_up + s_down + 1)
 
     def show(self, buf, (x, y)):
-        (ex, e_up, e_down) = self.expr.size()
-        (sx, s_up, s_down) = self.sub.size()
         self.expr.show(buf, (x, y))
-        self.sub.show(buf, (x + ex, y + e_down + 1))
+        self.sub.show(buf, (x + self.ex, y + self.e_down + 1))
 
     def __repr__(self):
         return 'Sub(' + repr(self.sub) + ', ' + repr(self.expr) + ')'
@@ -223,13 +240,14 @@ class Paren(object):
 
     def size(self):
         (ex, e_up, e_down) = self.expr.size()
+        self.ex = ex
+        self.e_up = e_up
         return (ex + 2, e_up, e_down)
 
     def show(self, buf, (x, y)):
-        (ex, e_up, e_down) = self.expr.size()
-        strbuf('(', buf, (x, y + e_up))
+        strbuf('(', buf, (x, y + self.e_up))
         self.expr.show(buf, (x + 1, y))
-        strbuf(')', buf, (x + 1 + ex, y + e_up))
+        strbuf(')', buf, (x + 1 + self.ex, y + self.e_up))
 
     def __repr__(self):
         return 'Paren(' + repr(self.expr) + ')'
@@ -242,11 +260,11 @@ class Neg(object):
 
     def size(self):
         (ex, e_up, e_down) = self.expr.size()
+        self.e_up = e_up
         return (ex + 1, e_up, e_down)
 
     def show(self, buf, (x, y)):
-        (ex, e_up, e_down) = self.expr.size()
-        strbuf('-', buf, (x, y + e_up))
+        strbuf('-', buf, (x, y + self.e_up))
         self.expr.show(buf, (x + 1, y))
 
     def __repr__(self):
@@ -430,8 +448,8 @@ def eq_show_toggle():
         vim.current.window.cursor = cursor
         is_pretty = True
         vim.command('set nomodifiable')
-    except:
-        print('EqShow error')
+    except Exception as e:
+        print('EqShow error: ' + str(e))
         vim.current.buffer[:] = raw
         vim.current.window.cursor = cursor
   else:

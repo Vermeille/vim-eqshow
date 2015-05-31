@@ -313,19 +313,21 @@ class Funcall(object):
     def size(self):
         (fx, f_up, f_down) = self.name.size()
         (ax, a_up, a_down) = self.args.size()
-        return (fx + 1 + ax + 1, max(f_up, a_up), max(f_down, a_down))
+        self.f_up = f_up
+        self.fx = fx
+        self.ax = ax
+        self.a_up = a_up
+        self.up = max(f_up, a_up)
+        return (fx + 1 + ax + 1, self.up, max(f_down, a_down))
 
     def show(self, buf, (x, y)):
-        (_, up, _) = self.size()
-        (fx, f_up, f_down) = self.name.size()
-        (ax, a_up, a_down) = self.args.size()
-        self.name.show(buf, (x, y + up - f_up))
-        x += fx
-        strbuf('(', buf, (x, y + up - f_up))
+        self.name.show(buf, (x, y + self.up - self.f_up))
+        x += self.fx
+        strbuf('(', buf, (x, y + self.up - self.f_up))
         x += 1
-        self.args.show(buf, (x, y + up - a_up))
-        x += ax
-        strbuf(')', buf, (x, y + up - f_up))
+        self.args.show(buf, (x, y + self.up - self.a_up))
+        x += self.ax
+        strbuf(')', buf, (x, y + self.up - self.f_up))
 
     def __repr__(self):
         return 'Funcall(' + repr(self.name) + ', ' + repr(self.args) + ')'
